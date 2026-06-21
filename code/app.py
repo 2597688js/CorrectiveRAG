@@ -32,6 +32,25 @@ st.set_page_config(
 )
 
 st.title("📚 Corrective RAG")
+
+try:
+
+    workflow_graph = (
+        AgentBuilder
+        .build()
+        .get_graph()
+        .draw_mermaid_png()
+    )
+
+    st.sidebar.image(
+        workflow_graph,
+        caption="CRAG Workflow",
+        use_container_width=True,
+    )
+
+except Exception:
+    pass
+
 st.caption(
     "Upload one or more PDF documents and ask questions."
 )
