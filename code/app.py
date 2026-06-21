@@ -243,5 +243,5 @@ if st.session_state.retriever_ready:
 st.divider()
 
 st.caption(
-    "Corrective RAG powered by LangGraph, FAISS, OpenAI and Tavily."
+    "Corrective RAG powered by NVIDIA NIM, NeMO Agent Toolkit, LangGraph and FAISS."
 )
