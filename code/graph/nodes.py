@@ -7,12 +7,11 @@ Description :
 """
 
 import re
-from typing import List
 
 from langchain_core.documents import Document
-from langchain_openai import ChatOpenAI
-from langchain_tavily import TavilySearch
+from langchain_nvidia_ai_endpoints import ChatNVIDIA
 
+from config.nvidia import llm_model, nvidia_base_url
 from models.state import State
 from models.doc_eval import DocEvalScore
 from models.filter import KeepOrDrop
@@ -31,12 +30,16 @@ UPPER_TH = 0.7
 LOWER_TH = 0.3
 
 
-llm = ChatOpenAI(
-    model="gpt-4o-mini",
-    temperature=0,
-)
+llm_kwargs = {
+    "model": llm_model(),
+    "temperature": 0,
+}
 
-tavily = TavilySearch(max_results=5)
+base_url = nvidia_base_url()
+if base_url:
+    llm_kwargs["base_url"] = base_url
+
+llm = ChatNVIDIA(**llm_kwargs)
 
 retriever = None
 
@@ -149,54 +152,25 @@ def web_search_node(state: State):
         or state["question"]
     )
 
-    results = tavily.invoke(
-        {
-            "query": query
-        }
+    result = llm.invoke(
+        (
+            "Use your NVIDIA-hosted model knowledge to provide a concise "
+            "retrieval supplement for this query. Include only facts that are "
+            "useful for answering the user's question. If you are not "
+            f"confident, say so explicitly.\n\nQuery: {query}"
+        )
     )
-
-    web_docs = []
-
-    search_results = results.get(
-        "results",
-        [],
-    )
-
-    for result in search_results:
-
-        title = result.get(
-            "title",
-            "",
-        )
-
-        url = result.get(
-            "url",
-            "",
-        )
-
-        content = (
-            result.get("content", "")
-            or result.get("snippet", "")
-        )
-
-        text = (
-            f"TITLE: {title}\n"
-            f"URL: {url}\n\n"
-            f"CONTENT:\n{content}"
-        )
-
-        web_docs.append(
-            Document(
-                page_content=text,
-                metadata={
-                    "title": title,
-                    "url": url,
-                },
-            )
-        )
 
     return {
-        "web_docs": web_docs
+        "web_docs": [
+            Document(
+                page_content=result.content,
+                metadata={
+                    "source": "nvidia_nim_supplement",
+                    "query": query,
+                },
+            )
+        ]
     }
 
 
